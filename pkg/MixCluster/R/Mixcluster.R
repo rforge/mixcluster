@@ -144,7 +144,7 @@ GCMM_free<-function(x, g, kind, burn, iterGibbs, param, latent){
    
 
    for (k in 1:g){
-     colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+     colnames(output@param@margins[[k]])=paste("param",1:2,sep="")
      rownames(output@param@margins[[k]])=nam
      colnames(output@param@correlations[[k]])=nam
      rownames(output@param@correlations[[k]])=nam
@@ -208,7 +208,7 @@ GCMM_homo<-function(x, g, kind, burn, iterGibbs, param, latent){
   
   
   for (k in 1:g){
-    colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+    colnames(output@param@margins[[k]])=paste("param",1:2,sep="")
     rownames(output@param@margins[[k]])=nam
     colnames(output@param@correlations[[k]])=nam
     rownames(output@param@correlations[[k]])=nam
@@ -271,7 +271,7 @@ GCMM_indpt<-function(x, g, kind, burn, iterGibbs, param, latent){
   
   
   for (k in 1:g){
-    colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+    colnames(output@param@margins[[k]])=paste("param",1:2,sep="")
     rownames(output@param@margins[[k]])=nam
     colnames(output@param@correlations[[k]])=nam
     rownames(output@param@correlations[[k]])=nam
