@@ -40,7 +40,8 @@ mixres <- MixClusanalysis(simu, 2, model="homo", burn=50, iterGibbs=200)
 #  data("wines")
 #  mixres <- MixClusanalysis(wines, 2, model="all")
 
-## Cluster analysis of the forest fires data set by the three components mixture model of Gaussian copulas
+## Cluster analysis of the forest fires data set by 
+## the three components mixture model of Gaussian copulas
 ## without constraint on the correlation matrices
 #  data(forestfires)
 #  mixres <- MixClusanalysis(forestfires, 2)

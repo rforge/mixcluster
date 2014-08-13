@@ -1,6 +1,15 @@
 MixClusanalysis <- function(x, g, kind=NULL, model="free", nbchains=1, burn=100, iterGibbs=1000, param=NULL, latent=NULL){
   cat("  Initialization of the Gibbs sampler\n")
   
+  if (missing(x))
+    stop("Data set is missing!")
+  
+  if (any(is.na(x)))
+    stop("Data set containing missing values cannot be analyzed")
+  
+  if (missing(g))
+    stop("Class number is missing!")
+  
   # Define the nature of the variables if it is missing.
   if (is.null(kind)){
     kind <- rep(1,ncol(x))
@@ -13,15 +22,29 @@ MixClusanalysis <- function(x, g, kind=NULL, model="free", nbchains=1, burn=100,
         }
       }
     }
+  }else if ( (length(kind)!=ncol(x)) || (is.numeric(kind)==FALSE)){
+      stop("The nature of the variables is badly specified")
   }
+  
   if (all(kind==3))
     cat("  The identifiability of the model is not ensured\n")
   
-  if (is.null(param))
+  if (is.null(param)){
     param <- GCMMparam_init(g,x,kind)
+  }else if (class(param)!="MixClusparam"){
+    cat(" warning: the parameters wanted to be used for the initialization were not taken into account since they are not a instance of the MixClusparam class!")
+    param <- GCMMparam_init(g,x,kind)
+  }
+    
   
-  if (is.null(latent))
+  if (is.null(latent)){
     latent <- GCMMlatent_init(x,g,param,kind)
+  }else if ((is.matrix(latent)==FALSE) || (nrow(latent)!=nrow(x)) || ((ncol(latent)-1) != ncol(x))){
+    cat(" warning: the latent variables used to initialize the initialization were not taken into account since 
+        they are not on the good format: a matrix where the first column denotes the class membership of the individuals and 
+        where the other columns denote the latent Gaussian vector.")
+    latent <- GCMMlatent_init(x,g,param,kind)
+  }
   
   if (model=="free"){
     output <- GCMM_free(x, g, kind, burn, iterGibbs, param, latent)
@@ -64,7 +87,7 @@ MixClusanalysis <- function(x, g, kind=NULL, model="free", nbchains=1, burn=100,
       }
     }
   }else{
-    cat("  Error: model is not specified\n")
+    stop(" Model is not specified")
   }
   return(output)
 }
@@ -259,3 +282,6 @@ GCMM_indpt<-function(x, g, kind, burn, iterGibbs, param, latent){
   cat("\n")
   return(output)
 }
+
+
+
