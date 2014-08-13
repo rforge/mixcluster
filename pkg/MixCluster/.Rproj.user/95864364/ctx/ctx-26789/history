@@ -1,0 +1,512 @@
+criteria <- compute_criteria(x,save_param,kind,hetero=FALSE)
+output <- MixClusresultsctr(param=save_param, tik=criteria$tik, partition=criteria$z,
+criteria=list(loglike=criteria$loglike, bic=criteria$bic, icl=criteria$icl),
+data=list(nrow=nrow(latent), ncol=length(kind), kind=kind),
+mean_latent=save_latent, current_latent=latent,
+model="homo")
+nam <- colnames(x)
+if (is.null(nam))
+nam <- paste("X",1:ncol(x),sep="")
+for (k in 1:g){
+colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+rownames(output@param@margins[[k]])=nam
+colnames(output@param@correlations[[k]])=nam
+rownames(output@param@correlations[[k]])=nam
+}
+names(output@param@correlations)=paste("Class",1:g,sep="")
+names(output@param@margins)=paste("Class",1:g,sep="")
+colnames(output@tik)=paste("Class",1:g,sep="")
+colnames(output@mean_latent)=c("Z",paste("Y",nam,sep="_"))
+return(output)
+}
+GCMM_indpt<-function(x, g, kind, burn, itermax, param, latent){
+priors <- GCMMpriors(x,kind)
+print("Burn-in of the locally independent model")
+for (it in 1:burn){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+}
+save_param <- param
+save_latent <- latent
+print("Parameter inference of the locally independent model")
+for (it in 1:itermax){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+save_param <- addparam(save_param,param)
+save_latent <- save_latent + latent
+}
+print("Results building")
+save_param <- normsave(save_param,itermax)
+save_latent <- save_latent/(itermax+1)
+criteria <- compute_criteria(x,save_param,kind,hetero=FALSE,cim=TRUE)
+output <- MixClusresultsctr(param=save_param, tik=criteria$tik, partition=criteria$z,
+criteria=list(loglike=criteria$loglike, bic=criteria$bic, icl=criteria$icl),
+data=list(nrow=nrow(latent), ncol=length(kind), kind=kind),
+mean_latent=save_latent, current_latent=latent,
+model="indpt"
+)
+nam <- colnames(x)
+if (is.null(nam))
+nam <- paste("X",1:ncol(x),sep="")
+for (k in 1:g){
+colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+rownames(output@param@margins[[k]])=nam
+colnames(output@param@correlations[[k]])=nam
+rownames(output@param@correlations[[k]])=nam
+}
+names(output@param@correlations)=paste("Class",1:g,sep="")
+names(output@param@margins)=paste("Class",1:g,sep="")
+colnames(output@tik)=paste("Class",1:g,sep="")
+colnames(output@mean_latent)=c("Z",paste("Y",nam,sep="_"))
+return(output)
+}
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+require(MixCluster)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+GCMMparam_init_EM_loc_indpt <- function(g,x,kind){
+pi <- as.numeric(rdirichlet(1,rep(2,g)))
+margins <- list()
+gamma <- list()
+for (k in 1:g){
+margins[[k]] <- matrix(0,ncol(x),2)
+for (j in 1:ncol(x)){
+if (kind[j]==1){
+margins[[k]][j,] <- c(x[sample(1:nrow(x),1),j],sd(x[,j]))
+}else if (kind[j]==2){
+margins[[k]][j,] <- c(x[sample(1:nrow(x),1),j]+0.2,0)
+}else if (kind[j]==3){
+margins[[k]][j,] <- c(rbeta(1,1/2,1/2),0)
+}
+}
+gamma[[k]] <- diag(1,ncol(x),ncol(x))
+}
+return(GCMMparam(pi,margins,gamma))
+}
+GCMMparam_init <- function(g,x,kind){
+base <- XEM_loc_indpt(x,g,kind)
+for (u in 1:25){
+cand <- XEM_loc_indpt(x,g,kind)
+if (cand$loglike>base$loglike)
+base <- cand
+}
+return(base$param)
+}
+GCMMlatent_init <- function(x,g,param,kind){
+latent <- matrix(0,nrow(x),ncol(x)+1)
+proba <- compute_proba_cond(x, g, param, kind)
+proba <- as.matrix(proba/rowSums(proba))
+proba <- t(apply(proba,1,cumsum))
+tmp <- runif(nrow(x))
+if (g>1){
+latent[,1] <- rowSums(sweep(proba,1,tmp,"<="))+1
+}else{
+latent[,1] <- rep(1,nrow(x))
+}
+for (k in unique(latent[,1])){
+for (j in 1:ncol(x)){
+latent[which(latent[,1]==k),j+1] <- sample_yj_indpt(x[which(latent[,1]==k),j],kind[j],param@margins[[k]][j,])
+}
+}
+return(latent)
+}
+compute_proba_cond <- function(x,g,param,kind){
+proba <- matrix(param@proportions,nrow(x),g,byrow=TRUE)
+for (j in 1:ncol(x)){
+if (kind[j]==1){
+for (k in 1:g){
+proba[,k] <- proba[,k] * dnorm(x[,j],param@margins[[k]][j,1],param@margins[[k]][j,2])
+}
+}else if (kind[j]==2){
+for (k in 1:g){
+proba[,k] <- proba[,k] * dpois(x[,j],param@margins[[k]][j,1])
+}
+}else if (kind[j]==3){
+for (k in 1:g){
+proba[,k] <- proba[,k] * ((x[,j]==0)*param@margins[[k]][j,1]+(x[,j]==1)*(1-param@margins[[k]][j,1]))
+}
+}
+}
+return(proba)
+}
+XEM_loc_indpt <- function(x,g,kind){
+param <- GCMMparam_init_EM_loc_indpt(g,x,kind)
+proba <- compute_proba_cond(x, g, param, kind)
+loglike <- sum(log(rowSums(proba)))
+prec <- -Inf
+loglike
+while ((loglike-prec)>10^(-2)){
+proba <- proba/rowSums(proba)
+param@proportions <- colSums(proba)/nrow(x)
+new_proba <- matrix(param@proportions,nrow(x),g,byrow=TRUE)
+for (k in 1:g){
+for (j in 1:ncol(x)){
+if (kind[j]==1){
+param@margins[[k]][j,1] <- sum(proba[,k]*x[,j])/sum(proba[,k])
+param@margins[[k]][j,2] <- sqrt(sum(proba[,k]*((x[,j]-param@margins[[k]][j,1])**2))/sum(proba[,k]))
+new_proba[,k] <- new_proba[,k]  * dnorm(x[,j],param@margins[[k]][j,1],param@margins[[k]][j,2])
+}else if (kind[j]==2){
+param@margins[[k]][j,1] <- sum(proba[,k]*x[,j])/sum(proba[,k])
+new_proba[,k] <- new_proba[,k]  * dpois(x[,j],param@margins[[k]][j,1])
+}else if (kind[j]==3){
+param@margins[[k]][j,1] <- 1-sum(proba[,k]*x[,j])/sum(proba[,k])
+new_proba[,k] <- new_proba[,k]  * ((x[,j]==0)*param@margins[[k]][j,1]+(x[,j]==1)*(1-param@margins[[k]][j,1]))
+}
+}
+}
+proba <- new_proba
+#proba <- compute_proba_cond(x, g, param, kind)
+prec <- loglike
+loglike <- sum(log(rowSums(proba)))
+if(is.na(loglike)){
+param <- GCMMparam_init_EM_loc_indpt(g,x,kind)
+proba <- compute_proba_cond(x, g, param, kind)
+loglike <- sum(log(rowSums(proba)))
+}
+if (prec>loglike){print(c(prec,loglike))}
+}
+for (j in 1:ncol(x)){
+for (k in 1:g){
+if (kind[j]==3){
+if (param@margins[[k]][j,1]>0.95)
+param@margins[[k]][j,1] <- 0.95
+if (param@margins[[k]][j,1]<0.05)
+param@margins[[k]][j,1] <- 0.05
+}
+}
+}
+return(list(loglike=loglike,param=param))
+}
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+setClass(
+Class="MixClusparam",
+representation=representation(
+proportions="numeric",
+margins="list",
+correlations="list"
+),
+prototype = prototype(
+proportions=numeric(0),
+margins=list(),
+correlations=list()
+)
+)
+GCMMparam <- function(proportions,margins,correlations){
+new("MixClusparam",proportions=proportions,margins=margins,correlations=correlations)
+}
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+require(MixComp)
+library(MixCluster)
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+MixClusanalysis <- function(x, g, kind=NULL, model="free", nbchains=1, burn=100, itermax=1000, param=NULL, latent=NULL){
+print("Initialization of the Gibbs sampler")
+# Define the nature of the variables if it is missing.
+if (is.null(kind)){
+kind <- rep(1,ncol(x))
+for (j in 1:ncol(x)){
+if (all(x[,j]==ceiling(x[,j]))){
+if (max(x[,j])==1){
+kind[j] <- 3
+}else{
+kind[j] <- 2
+}
+}
+}
+}
+if (all(kind==3))
+print("The identifiability of the model is not ensured")
+if (is.null(param))
+param <- GCMMparam_init(g,x,kind)
+if (is.null(latent))
+latent <- GCMMlatent_init(x,g,param,kind)
+if (model=="free"){
+output <- GCMM_free(x, g, kind, burn, itermax, param, latent)
+if (nbchains>1){
+for (u in 2:nbchains){
+cand <- GCMM_free(x, g, kind, burn, itermax, param, latent)
+if (cand@criteria$loglike>output@criteria$loglike)
+output <- cand
+}
+}
+}else if (model=="homo"){
+output <- GCMM_homo(x, g, kind, burn, itermax, param, latent)
+if (nbchains>1){
+for (u in 2:nbchains){
+cand <- GCMM_homo(x, g, kind, burn, itermax, param, latent)
+if (cand@criteria$loglike>output@criteria$loglike)
+output <- cand
+}
+}
+}else if (model=="indpt"){
+output <- GCMM_indpt(x, g, kind, burn, itermax, param, latent)
+if (nbchains>1){
+for (u in 2:nbchains){
+cand <- GCMM_indpt(x, g, kind, burn, itermax, param, latent)
+if (cand@criteria$loglike>output@criteria$loglike)
+output <- cand
+}
+}
+}else if (model=="all"){
+output <- list(free=GCMM_free(x, g, kind, burn, itermax, param, latent), homo=GCMM_homo(x, g, kind, burn, itermax, param, latent), indpt=GCMM_indpt(x, g, kind, burn, itermax, param, latent))
+if (nbchains>1){
+for (u in 2:nbchains){
+cand <- list(free=GCMM_free(x, g, kind, burn, itermax, param, latent), homo=GCMM_homo(x, g, kind, burn, itermax, param, latent), indpt=GCMM_indpt(x, g, kind, burn, itermax, param, latent))
+if (cand$free@criteria$loglike>output$free@criteria$loglike)
+output$free <- cand$free
+if (cand$homo@criteria$loglike>output$homo@criteria$loglike)
+output$homo <- cand$homo
+if (cand$indpt@criteria$loglike>output$indpt@criteria$loglike)
+output$indpt <- cand$indpt
+}
+}
+}else{
+print("Error: model is not specified")
+}
+}
+GCMM_free<-function(x, g, kind, burn, itermax, param, latent){
+# initialization of the objects of GCM
+priors <- GCMMpriors(x,kind)
+print("Burn-in of the free model")
+for (it in 1:burn){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the correlation matrices
+param@correlations <- sample_correlations(latent,param@correlations)
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+}
+save_param <- param
+save_latent <- latent
+print("Parameter inference of the free model")
+for (it in 1:itermax){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the correlation matrices
+param@correlations <- sample_correlations(latent,param@correlations)
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+save_param <- addparam(save_param,param)
+save_latent <- save_latent + latent
+}
+print("Results bulding")
+#save_param <- normsave(save_param,itermax)
+#save_latent <- save_latent/(itermax+1)
+criteria <- compute_criteria(x,save_param,kind)
+output <- MixClusresultsctr(param=save_param, tik=criteria$tik, partition=criteria$z,
+criteria=list(loglike=criteria$loglike, bic=criteria$bic, icl=criteria$icl),
+data=list(nrow=nrow(latent), ncol=length(kind), kind=kind),
+mean_latent=save_latent, current_latent=latent,
+model="free")
+nam <- colnames(x)
+if (is.null(nam))
+nam <- paste("X",1:ncol(x),sep="")
+for (k in 1:g){
+colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+rownames(output@param@margins[[k]])=nam
+colnames(output@param@correlations[[k]])=nam
+rownames(output@param@correlations[[k]])=nam
+}
+names(output@param@correlations)=paste("Class",1:g,sep="")
+names(output@param@margins)=paste("Class",1:g,sep="")
+colnames(output@tik)=paste("Class",1:g,sep="")
+colnames(output@mean_latent)=c("Z",paste("Y",nam,sep="_"))
+return(output)
+}
+GCMM_homo<-function(x, g, kind, burn, itermax, param, latent){
+priors <- GCMMpriors(x,kind)
+print("Burn-in of the homoscedastic model")
+for (it in 1:itermax){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the correlation matrices
+param@correlations <- sample_correlations_homo(latent,param@correlations)
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+}
+save_param <- param
+save_latent <- latent
+print("Parameter inference of the homoscedastic model")
+for (it in 1:itermax){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the correlation matrices
+param@correlations <- sample_correlations_homo(latent,param@correlations)
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+save_param <- addparam(save_param,param)
+save_latent <- save_latent + latent
+}
+print("Results building")
+save_param <- normsave(save_param,itermax)
+save_latent <- save_latent/(itermax+1)
+criteria <- compute_criteria(x,save_param,kind,hetero=FALSE)
+output <- MixClusresultsctr(param=save_param, tik=criteria$tik, partition=criteria$z,
+criteria=list(loglike=criteria$loglike, bic=criteria$bic, icl=criteria$icl),
+data=list(nrow=nrow(latent), ncol=length(kind), kind=kind),
+mean_latent=save_latent, current_latent=latent,
+model="homo")
+nam <- colnames(x)
+if (is.null(nam))
+nam <- paste("X",1:ncol(x),sep="")
+for (k in 1:g){
+colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+rownames(output@param@margins[[k]])=nam
+colnames(output@param@correlations[[k]])=nam
+rownames(output@param@correlations[[k]])=nam
+}
+names(output@param@correlations)=paste("Class",1:g,sep="")
+names(output@param@margins)=paste("Class",1:g,sep="")
+colnames(output@tik)=paste("Class",1:g,sep="")
+colnames(output@mean_latent)=c("Z",paste("Y",nam,sep="_"))
+return(output)
+}
+GCMM_indpt<-function(x, g, kind, burn, itermax, param, latent){
+priors <- GCMMpriors(x,kind)
+print("Burn-in of the locally independent model")
+for (it in 1:burn){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+}
+save_param <- param
+save_latent <- latent
+print("Parameter inference of the locally independent model")
+for (it in 1:itermax){
+# sampling of the latent variables
+latent <- sample_latent_variables(x,g,latent,param,kind)
+# sampling of the marings and gaussian parameters
+tmp <- sample_margins_and_gaussian(x,latent,param,priors,kind)
+latent <- tmp$latent
+param <- tmp$param
+# sampling of the vector of proportions
+param@proportions <- sample_proportions(table(c(1:g,latent[,1])))
+save_param <- addparam(save_param,param)
+save_latent <- save_latent + latent
+}
+print("Results building")
+save_param <- normsave(save_param,itermax)
+save_latent <- save_latent/(itermax+1)
+criteria <- compute_criteria(x,save_param,kind,hetero=FALSE,cim=TRUE)
+output <- MixClusresultsctr(param=save_param, tik=criteria$tik, partition=criteria$z,
+criteria=list(loglike=criteria$loglike, bic=criteria$bic, icl=criteria$icl),
+data=list(nrow=nrow(latent), ncol=length(kind), kind=kind),
+mean_latent=save_latent, current_latent=latent,
+model="indpt"
+)
+nam <- colnames(x)
+if (is.null(nam))
+nam <- paste("X",1:ncol(x),sep="")
+for (k in 1:g){
+colnames(output@param@margins[[k]])=paste("param",1:g,sep="")
+rownames(output@param@margins[[k]])=nam
+colnames(output@param@correlations[[k]])=nam
+rownames(output@param@correlations[[k]])=nam
+}
+names(output@param@correlations)=paste("Class",1:g,sep="")
+names(output@param@margins)=paste("Class",1:g,sep="")
+colnames(output@tik)=paste("Class",1:g,sep="")
+colnames(output@mean_latent)=c("Z",paste("Y",nam,sep="_"))
+return(output)
+}
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+library(MixCluster)
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+test=list()
+is.null(test[[3]])
+test
+test=list(3)
+test
+library(MixCluster)
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+str(analyze_free)
+analyze_free
+library(MixCluster)
+data(wines)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+analyze_free
+class(analyze_free)
+library(MixCluster)
+data(wines)
+# Cluster analysis of data set composed with
+# 11 continuous variables and 1 integer variables (free model)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+analyze_free
+library(MixCluster)
+data(wines)
+# Cluster analysis of data set composed with
+# 11 continuous variables and 1 integer variables (free model)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+str(analyze_free)
+library(MixCluster)
+library(MixCluster)
+library(MixCluster)
+library(MixCluster)
+data(wines)
+# Cluster analysis of data set composed with
+# 11 continuous variables and 1 integer variables (free model)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, itermax=1)
+# Cluster analysis of data set composed with
+# 11 continuous variables and 1 integer variables (free model)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, iterGibbs=1)
+library(MixCluster)
+data(wines)
+# Cluster analysis of data set composed with
+# 11 continuous variables and 1 integer variables (free model)
+analyze_free <- MixClusanalysis(wines[,-13], 2, burn=2, iterGibbs=1)
+## not run:
+# Another example where the three models are estimated.
+analyze_all <- MixClusanalysis(wines[,-13], 2, model="all", burn=2, iterGibbs=1)
+library(MixCluster)
+obj=analyze_free
+class=1
+axe=1:2
+obj@test_expect_y[class]
+obj@test_expect_y[class] <- 1
+obj@expect_y[[class]]  <- compute_cik(obj, class)

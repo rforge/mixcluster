@@ -1,0 +1,7 @@
+exportClasses(MixClusparam)
+exportClasses(MixClusresults)
+export(MixClusanalysis)
+export(MixClusvisu)
+exportMethods(summary)
+exportMethods(plot)
+importFrom(graphics,plot)
