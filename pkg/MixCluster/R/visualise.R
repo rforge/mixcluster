@@ -1,17 +1,4 @@
 compute_w <- function(x, param, k, kind=NULL){
-  if (is.null(kind)){
-    kind <- rep(1,ncol(x))
-    for (j in 1:ncol(x)){
-      if (all(x[,j]==ceiling(x[,j]))){
-        if (max(x[,j])==1){
-          kind[j] <- 3
-        }else{
-          kind[j] <- 2
-        }
-      }
-    }
-  }
-  
   y <- x
   if (any(kind==1)){
     for (j in which(kind==1))
@@ -21,33 +8,32 @@ compute_w <- function(x, param, k, kind=NULL){
   if (any(kind!=1)){
     who <- which(kind!=1)
     for (j in who){
-      if (kind[j]==3){
-        y[,j] <- genere_y_entier(x[,j],param@margins[[k]][j,1])
-      }else if (kind[j]==3){
-        y[,j] <- genere_y_binaire(x[,j],param@margins[[k]][j,1]) 
+      if (kind[j]==2){
+        y[,j] <-  genere_y_cond(x[,j], GCMMparam_entier(param@margins[[k]][j,1]), rep(0,nrow(x)),matrix(1,1,1))
+      }else {
+        y[,j] <-  genere_y_cond(x[,j], GCMMparam_ordinal(param@margins[[k]][j,1:max(x[,j]+1)]), rep(0,nrow(x)),matrix(1,1,1))
       }
     }
   }
   
-  
   sauve <- y
-  for (it in 1:500){
-    if (any(kind!=1)){
+  if (any(kind!=1)){
+    for (it in 1:500){
       for (j in who){
         me <-  rowSums(sweep(as.matrix(y[,-j]), 2, as.numeric(param@correlations[[k]][j,-j] %*% solve(param@correlations[[k]][-j,-j]) ),FUN="*"))
         sig <- sqrt( param@correlations[[k]][j,j]- param@correlations[[k]][j,-j] %*% solve(param@correlations[[k]][-j,-j])  %*%param@correlations[[k]][-j,j] )
         
         
         if (kind[j]==2){
-          y[,j] <- genere_y_entier2(param@margins[[k]][j,1], x[,j], me, sig)
-        }else if (kind[j]==3){
-          y[,j] <- genere_y_binaire2(param@margins[[k]][j,1], x[,j], me, sig) 
+          y[,j] <- genere_y_cond(x[,j], GCMMparam_entier(param@margins[[k]][j,1]),  me, sig)
+        }else {
+          y[,j] <-genere_y_cond(x[,j], GCMMparam_ordinal(param@margins[[k]][j,1:max(x[,j]+1)]),  me, sig) 
         }
       }
     }
     sauve <- sauve + y
   }
-  sauve <- as.matrix(sauve /1000)
+  sauve <- as.matrix(sauve /500)
   return(sauve)
 }
 
