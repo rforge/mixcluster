@@ -1,11 +1,10 @@
 \docType{methods}
 \name{plot}
 \alias{plot}
-\alias{plot,MixClusresults-method}
+\alias{plot,MixClusResults,ANY-method}
 \title{Plot the probability distribution functions of the one-dimensional margins per components}
 \arguments{
-  \item{x}{A \code{\linkS4class{MixClusresults}} object}
-
+  \item{x}{A \code{\linkS4class{MixClusResults}} object}
   \item{y}{A numeric vector indicating the plotted variables}
 }
 \value{
@@ -21,7 +20,7 @@ data("simu")
 
 # Cluster analysis by the bi-component mixture model of Gaussian copulas
 # with equal correlation matrices between classes
-mixres <- MixClusanalysis(simu, 2, model="homo", burn=50, iterGibbs=200)
+mixres <- MixClusClustering(simu, 2, model="homo", nbalgo=1, burn_in=30, nbiter=100)
 
 # Univariate probability distribution function of the one-dimensional 
 # margins per component weigthed by the component proportions
