@@ -1,12 +1,12 @@
 Package: MixCluster
 Type: Package
-Title: MixCluster performs the cluster analysis, the semi-supervized and the supervized classification of mixed-type data sets (data sets with different natures of variables) with missing values.
+Title: MixCluster performs the cluster analysis of mixed-type data (data set with different natures of variables).
 Version: 1.0
 Date: 2014-08-11
 Author: Matthieu Marbac & Christophe Biernacki & Vincent Vandewalle
 Maintainer: Matthieu Marbac <matthieu.marbac-lourdelle@inria.fr>
 Description: MixCluster performs the cluster analysis of mixed-type data (data set composed by different natures of variables). More precisely, it can analyze data whose the variables are continuous, integer, binary or ordinal. MixCluster models the data distribution by a mixture model of Gaussian copulas (Marbac and al, 2014). Therefore, it takes into account the intra-class dependencies and the one-dimensional margins of its components follow classical distributions (Gaussian, Poisson or multinomial). The inference is performed by a Gibbs sampler implemented in MixCluster. Moreover, tool-functions are focused on the data visualization. They used the latent variables related to the Gaussian copulas in order to obtain a scatterplot of the individuals per class by using PCA-type visualization. This approach also permit to summarize the intra-class dependencies. 
 License: GPL (>=2)
-Depends: R (>= 2.14), methods, MCMCpack, tmvtnorm, mvtnorm, msm, plotrix
-Collate:   'classes.R' 'tools.R' 'Initialization.R' 'MixClusMHlatent.R' 'MixClusMHmargin.R' 'MixClusCorrelations.R'  'MixClusProba.R' 'MixClusClassification.R' 'MixClusClustering.R' 'MixClusVisu.R' 'MixClusPredict.R' 'summary.R' 'plot.R'
+Depends: R (>= 2.14), methods, MCMCpack, mvtnorm, msm, plotrix
+Collate:  'tools.R' 'MixClusparam.R' 'MixClusresults.R' 'Initialization.R' 'visualise.R'  'summary.R' 'sample_proportions.R' 'tools_to_sample_margins_and_gaussian.R' 'MH1_latent.R' 'sample_correlations.R' 'Mixcluster.R' 
 LazyLoad: yes
