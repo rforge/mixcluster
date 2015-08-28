@@ -1,10 +1,10 @@
 \docType{methods}
 \name{summary}
 \alias{summary}
-\alias{summary,MixClusresults-method}
+\alias{summary,MixClusResults-method}
 \title{Summary of a MixClusresults class}
 \arguments{
-  \item{x}{A \code{\linkS4class{MixClusresults}} object}
+  \item{x}{A \code{\linkS4class{MixClusResults}} object}
 
   \item{...}{further arguments passed to or from other
   methods}
@@ -13,11 +13,12 @@
   NULL. Summaries to standard out.
 }
 \description{
-  Produce result summaries of a MixClusresults class
+  Provides result summaries of a MixClusresults class
 }
 \examples{
 data("simu")
-mixres <- MixClusanalysis(simu, 2, model="homo", burn=50, iterGibbs=200)
+
+mixres <- MixClusClustering(simu, 2, nbalgo=1, burn_in=30, nbiter=100)
 
 summary(mixres)
 
