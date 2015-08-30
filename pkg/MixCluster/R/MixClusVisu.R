@@ -1,3 +1,25 @@
+MixClusUpdateForVisu <- function(output){
+  for (k in 1:output@model$model@g){
+    output@data@condexpec[[k]] <- matrix(0, output@data@n, output@data@e)
+    sup <- matrix(0,output@data@n,output@data@e)
+    inf <- matrix(0,output@data@n,output@data@e)
+    for (j in 1:output@data@e){
+      bound <- cbind(rep(-Inf, output@data@n), rep(Inf, output@data@n))
+      bound[output@data@o[[j]], ] <- findbounds(output@data@x[output@data@o[[j]], j], output@param@beta[[k]][[j]])
+      if (output@data@kind[j]==1){
+        bound[,1] <- bound[,1]-10**(-6) 
+      }
+      sup[,j] <- bound[,2]
+      inf[,j] <- bound[,1]
+    }
+    for (i in 1:output@data@n)
+      output@data@condexpec[[k]][i,] <- mtmvnorm(mean=rep(0,output@data@e), sigma=output@param@correl[[k]], lower=inf[i,], upper=sup[i,])$tmean
+    
+    
+  }
+       return(output)
+}
+
 MixClusVisu <- function(obj, class, axe=c(1,2), figure=c("scatter","circle"),...){
   op <- par(no.readonly = TRUE)
   res.eigen <- eigen(obj@param@correl[[class]]) 

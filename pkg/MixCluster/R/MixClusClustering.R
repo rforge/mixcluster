@@ -5,8 +5,6 @@ MixClusGibbs <- function(data, model, param, latent, priors, nbiter, backup){
     # by using a Metropolis-Hastings algorithm
     #print("latent")
     latent <- MixClusMHlatent(data, model, param, latent)
-    
-    
     # Sampling of the margin parameters and sampling of the continuous latent vector
     # The margin parameters are sampled via a Metropolis-Hastings algorithm
     # The continuous vector is sampled from its posterior distribution conditionally on the 
@@ -143,8 +141,6 @@ MixClusClustering <- function(x, g, model="hetero", kind=NULL, nbalgo=1, burn_in
       inf[,j] <- bound[,1]
     }
     
-#     for (i in 1:output@data@n)
-#       output@data@condexpec[[k]][i,] <- mtmvnorm(mean=rep(0,output@data@e), sigma=output@param@correl[[k]], lower=inf[i,], upper=sup[i,])$tmean
   }
   
   
