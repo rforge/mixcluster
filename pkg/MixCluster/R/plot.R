@@ -15,7 +15,7 @@ plot_continue <- function(object, j){
 
 plot_entier <- function(object, j){
   main <- colnames(object@data@x)[j]
-  e <- range(object@data@x[object@data@o[[j]], j])
+  e <- range(object@data@x[object@data@o[[j]], j])+c(-10,10)
   se <- e[1]: e[2]
   re <- matrix(0,length(object@param@pi),length(se))
   colnames(re) <- min(se):max(se)

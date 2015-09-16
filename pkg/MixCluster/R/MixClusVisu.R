@@ -10,10 +10,15 @@ MixClusUpdateForVisu <- function(output){
         bound[,1] <- bound[,1]-10**(-6) 
       }
       sup[,j] <- bound[,2]
+      if (any(sup[,j]==-Inf)) sup[which(sup[,j]==-Inf),j] <- -10**(6)
       inf[,j] <- bound[,1]
+      if (any(inf[,j]==Inf)) inf[which(inf[,j]==Inf),j] <- 10**(6)
     }
-    for (i in 1:output@data@n)
-      output@data@condexpec[[k]][i,] <- mtmvnorm(mean=rep(0,output@data@e), sigma=output@param@correl[[k]], lower=inf[i,], upper=sup[i,])$tmean
+    for (i in 1:output@data@n){
+      print(i)
+      output@data@condexpec[[k]][i,] <- mtmvnorm(mean=rep(0,output@data@e), sigma=output@param@correl[[k]], lower=inf[i,], upper=sup[i,], doComputeVariance = FALSE)$tmean
+    }
+  
     
     
   }
