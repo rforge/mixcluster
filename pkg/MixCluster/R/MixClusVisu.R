@@ -15,7 +15,6 @@ MixClusUpdateForVisu <- function(output){
       if (any(inf[,j]==Inf)) inf[which(inf[,j]==Inf),j] <- 10**(6)
     }
     for (i in 1:output@data@n){
-      print(i)
       output@data@condexpec[[k]][i,] <- mtmvnorm(mean=rep(0,output@data@e), sigma=output@param@correl[[k]], lower=inf[i,], upper=sup[i,], doComputeVariance = FALSE)$tmean
     }
   

@@ -16,8 +16,6 @@ exportClasses(MixClusModel_indpt)
 exportClasses(MixClusResults)
 
 export(MixClusClustering)
-export(MixClusClassification)
-export(MixClusPredict)
 export(MixClusUpdateForVisu)
 export(MixClusVisu)
 

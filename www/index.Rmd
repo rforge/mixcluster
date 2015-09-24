@@ -1,0 +1,111 @@
+---
+title: '**MixCluster**'
+output: html_document
+---
+
+
+*Mixture Model of Gaussian copulas to cluster mixed data*
+
+**Description:**
+  
+* *Authors*: **Matthieu Marbac** and **Christophe Biernacki** and **Vincent Vandewalle**.
+* *License*: [GPL-2](http://www.gnu.org/licenses/gpl-2.0.html).
+*  *Download MixClust 1.0*: [link](https://r-forge.r-project.org/R/?group_id=1939).
+* *Reference*: [Model-based clustering of Gaussian copulas for mixed data](http://arxiv.org/abs/1405.1299), Marbac, M. and Biernacki, B. and Vandewalle, V., 2015, preprint.
+
+<a id="top"></a>
+**Site map:**  
+
+* <a href="#intro">Introduction</a>.
+* <a href="#tutorial">Tutorial (Example 2.2 of the preprint)</a>.
+
+<a id="intro"></a>
+
+### Introduction
+*VarSelLCM* achieves the mixed data clustering with a Gaussian copula mixture model, since copulas, and in particular the Gaussian ones, are powerful tools for easily modelling the distribution of multivariate variables. 
+Indeed, considering a mixing of continuous, integer and ordinal variables (thus all having a cumulative distribution function), this mixture model allows to model intra-component dependencies like a Gaussian mixture, so with standard correlation meaning.
+Simultaneously, it preserves standard margins associated to continuous, integer and ordered features, namely the Gaussian, the Poisson and the ordered multinomial distributions.
+As an interesting by-product, the proposed mixture model generalizes many well-known ones and provides tools of visualization based on the model parameters.
+At a practical level, the Bayesian inference is retained and it is achieved with a Metropolis-within-Gibbs sampler.
+
+Tool functions (*summary* and *MixClusVisu*) facilitate the result interpretation.
+
+* <a href="#top">Go to the top</a>
+
+
+<a id="tutorial"></a>
+
+###  Overview of the VarSelLCM functions
+
+This section reproduces Example 2.2 of the preprint 
+
+First, the cluster analysis is performed with two components, then a model summary is given (partition and parameters). Finally, the cluster interpretation can be done based on the graphical and numerical presentations of the parameters.
+
+**Loadings**
+
+```{r, comment=""}
+rm(list=ls())
+set.seed(135)
+library(MixCluster)
+
+# Loading of a dataset simulated from a bi-component mixture model of Gaussian copulas
+# (see Example 2.2 page 6)
+# The first column indicates the class membership
+# The last three column are used for the clustering
+data(simu)
+```
+
+**Clustering of mixed variables**
+
+```{r, comment=""}
+# Cluster analysis by the bi-component mixture model of Gaussian copulas
+# without constrain between the correlation matrices
+res.mixclus <- MixClusClustering(simu[,-1], 2)
+```
+
+**Confusion matrix**
+
+```{r, comment=""}
+# Confusion matrix between the estimated (row) and the true (column) partition
+table(res.mixclus@data@partition, simu[,1])
+```
+
+
+**Model Summary**
+
+```{r, comment=""}
+# Summary of the model
+summary(res.mixclus)
+```
+
+**Visualisation**
+We reproduce the elements of Figure 1
+```{r, comment=""}
+# Visualisation
+# Update of the results (computing the conditional expectations of the latent vectors
+# related to the Gaussian copulas)
+res.mixclus <- MixClusUpdateForVisu(res.mixclus)
+```
+
+
+
+```{r, comment=""}
+# Scatterplot of the individuals  (Figure 1.(a)) described by three variables:
+# one continuous (abscissa), one integer (ordiate) and one binary (symbol).
+# Colors indicate the component memberships
+plot(simu[,2:3], col=simu[,1], pch=16+simu[,4], xlab=expression(x^1), ylab=expression(x^2))
+```
+
+
+```{r, comment=""}
+# Scatterplot of the individuals in the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 1, figure = "scatter", xlim=c(-10,4), ylim=c(-4,4))
+```
+
+
+```{r, comment=""}
+# Correlation circle of the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 1, figure = "circle")
+```
+
+* <a href="#top">Go to the top</a>

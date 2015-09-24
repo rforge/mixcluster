@@ -3,9 +3,9 @@
 \name{simu}
 \alias{simu}
 \title{A simulated data set}
-\format{A data matrix with 100 rows and 3 columns.}
+\format{A data matrix with 200 rows and 4 columns.}
 \description{
-This data set was sampled from a bi-component mixture model of Gaussian copulas with equal correlation matrices between classes. It is composed with one continuous variable, one integer variable and one binary variable.
+This data set was sampled from a bi-component mixture model of Gaussian copulas. It is composed with one continuous variable, one integer variable and one binary variable.
 }
 \examples{
 data("simu")

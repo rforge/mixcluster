@@ -3,10 +3,10 @@
 \alias{MixCluster}
 \docType{package}
 \title{
-MIXed-type of data CLUSTER analysis by a mixture model of Gaussian copulas
+Mixed data Clustering by a mixture model of Gaussian copulas
 }
 \description{
-MixCluster performs the cluster analysis, the semi-supervised and the supervized analysis of mixed data with missing values by using a mixture of Gaussian copulas (Marbac and al, 2014).
+MixCluster performs the cluster analysis of mixed data with missing values by using a mixture of Gaussian copulas (Marbac and al, 2015).
 Thus, it can analyze data sets composed by continuous, integer, binary or ordinal variables.
 The one-dimensional margins of each component follow classical distributions (Gaussian, Poisson, multinomial) and the intra-class dependencies are modelized. A Gibbs sampler performs the Bayesian inference. Finally, a PCA-type approach per class allows to visualize the individuals per class and summarizes the intra-class dependencies.
 }
@@ -19,54 +19,51 @@ Date: \tab 2014-08-11\cr
 License: \tab GPL (>=2)\cr
 }
 
-The main two functions of MixCluster are \link{MixClusClustering} and \link{MixClusClassification}. They perform the parameter estimation by a Gibbs sampler then they respectively perform the cluster analysis and the semi-supervised and supervized classification.  The one-dimensional margins per class are plotted by the function \link{plot}. A summary of the results is provided by the function \link{summary}. Finally, a scatterplot of the individual using a PCA per class can be drawn by the function \link{MixClusVisu}. This function also summarizes the intra-class dependencies by drawing the correlation circle per class. Finally, MixCluster contains three data sets: one simulated data set and two real data sets used in the article Marbac and al (2014).
-
+The main two functions of MixCluster is \link{MixClusClustering}. It performs the parameter estimation by a Gibbs sampler then they respectively perform the cluster analysis. The one-dimensional margins per class are plotted by the function \link{plot}. A summary of the results is provided by the function \link{summary}. Finally, a scatterplot of the individual using a PCA per class can be drawn by the function \link{MixClusVisu}. This function also summarizes the intra-class dependencies by drawing the correlation circle per class. Finally, MixCluster contains three data sets: one simulated data set and two real data sets used in the article Marbac and al (2015).
 }
 \author{
 Matthieu Marbac & Christophe Biernacki & Vincent Vandewalle
 
-Maintainer: Matthieu Marbac <matthieu.marbac-lourdelle@inria.fr>
+Maintainer: Matthieu Marbac <matthieu.marbac@gmail.com>
 }
 \references{
-M. Marbac, C. Biernacki & V. Vandewalle (2014). Model-based clustering of Gaussian copulas for mixed data. Preprint.
+M. Marbac, C. Biernacki & V. Vandewalle (2015). Model-based clustering of Gaussian copulas for mixed data. Preprint.
 }
 
 
 
 \examples{
-# Importation of the data set
-data("simu")
+\dontrun{
+# Loading of a dataset simulated from a bi-component mixture model of Gaussian copulas
+# (see Example 2.2 page 6)
+# The first column indicates the class membership
+# The last three column are used for the clustering
+data(simu)
 
- simu[runif(300)<0.2] <- NA
 # Cluster analysis by the bi-component mixture model of Gaussian copulas
 # without constrain between the correlation matrices
-resclustering <- MixClusClustering(simu, 2, nbalgo=1, burn_in=30, nbiter=100)
+res.mixclus <- MixClusClustering(simu[,-1], 2)
 
-# Univariate probability distribution functions of the one-dimensional 
-# margins per component weigthed by the component proportions
-plot(resclustering )
+# Confusion matrix between the estimated (row) and the true (column) partition
+table(res.mixclus@data@partition, simu[,1])
 
-# PCA-type visualization per class by using the model parameters 
-# (here visualization throughout the parameters of class 1)
-MixClusVisu(resclustering , 1)
+# Summary of the model
+summary(res.mixclus)
 
-# Supervized classification performed by the bi-component homoscedastic model with missing values
-who <- which(runif(100)<0.6)
-z <- rep(2, length(who))
-z[which(who<=65)] <- 1
-ressupervized  <- MixClusClassification(simu[who,], z, nbalgo=1, burn_in=30, nbiter=100)
-predictsupervized <- MixClusPredict(simu[-who,], ressupervized)
+# Visualisation
+# Update of the results (computing the conditional expectations of the latent vectors
+# related to the Gaussian copulas)
+res.mixclus <- MixClusUpdateForVisu(res.mixclus)
 
+# Scatterplot of the individuals  (Figure 1.(a)) described by three variables:
+# one continuous (abscissa), one integer (ordiate) and one binary (symbol).
+# Colors indicate the component memberships
+plot(simu[,2:3], col=simu[,1], pch=16+simu[,4], xlab=expression(x^1), ylab=expression(x^2))
 
-# Semi-supervized classification performed by the bi-component homoscedastic model with missing values
-z <- c(rep(1,65), rep(2,35))
-z[-who] <- NA
-ressemisupervized  <- MixClusClassification(simu, z, nbalgo=1, burn_in=30, nbiter=100)
+# Scatterplot of the individuals in the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 2, figure = "scatter", xlim=c(-10,4), ylim=c(-4,4))
 
-                   
-# Summary of the results
-summary(ressemisupervized)
-
-
-
+# Correlation circle of the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 2, figure = "circle")
+}
 }

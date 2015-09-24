@@ -2,8 +2,7 @@
 \alias{MixClusClustering}
 \title{MixClusClustering function}
 \usage{
-  MixClusClustering(x, g, model="hetero", kind=NULL, nbalgo=3,
-                    burn_in=300, nbiter=300,  param)
+  MixClusClustering(x, g, model="hetero", kind=NULL, nbalgo=1, burn_in=100, nbiter=1000, param)
 }
 \arguments{
   \item{x}{Input data as matrix or data-frame. The binary and the ordinal variables have to use a numeric coding as follows: 0,1,2,...,number of modalities.}
@@ -31,26 +30,39 @@
   This function performs the cluster analysis of mixed data sets with missing values by using the mixture model of Gaussian copulas.
 }
 \examples{
-# Toy example
-data("simu")
+\dontrun{
+# Loading of a dataset simulated from a bi-component mixture model of Gaussian copulas
+# (see Example 2.2 page 6)
+# The first column indicates the class membership
+# The last three column are used for the clustering
+data(simu)
 
-# Introduce missing values
-simu[runif(300)<0.2] <- NA
+# Cluster analysis by the bi-component mixture model of Gaussian copulas
+# without constrain between the correlation matrices
+res.mixclus <- MixClusClustering(simu[,-1], 2)
 
-# Cluster analysis by using the bi-component heteroscedastic model
-mixres <- MixClusClustering(simu, 2, nbalgo=1, burn_in=30, nbiter=100)
+# Confusion matrix between the estimated (row) and the true (column) partition
+table(res.mixclus@data@partition, simu[,1])
 
+# Summary of the model
+summary(res.mixclus)
 
-## Cluster analysis of the wines data set by the three bi-components mixture models
-#  data("wines")
-#  mixres <- MixClusClustering(wines, 2)
+# Visualisation
+# Update of the results (computing the conditional expectations of the latent vectors
+# related to the Gaussian copulas)
+res.mixclus <- MixClusUpdateForVisu(res.mixclus)
 
-## Cluster analysis of the forest fires data set by 
-## the three components mixture model of Gaussian copulas
-## without constraint on the correlation matrices
-#  data(forestfires)
-#  mixres <- MixClusClustering(forestfires, 2)
+# Scatterplot of the individuals  (Figure 1.(a)) described by three variables:
+# one continuous (abscissa), one integer (ordiate) and one binary (symbol).
+# Colors indicate the component memberships
+plot(simu[,2:3], col=simu[,1], pch=16+simu[,4], xlab=expression(x^1), ylab=expression(x^2))
 
+# Scatterplot of the individuals in the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 2, figure = "scatter", xlim=c(-10,4), ylim=c(-4,4))
 
+# Correlation circle of the first PCA-map of the first-component of the model
+MixClusVisu(res.mixclus, class = 2, figure = "circle")
+
+}
 }
 
